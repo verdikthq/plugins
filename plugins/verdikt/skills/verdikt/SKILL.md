@@ -109,14 +109,14 @@ Read `https://demo.verdikt.bond/llms.txt` first; it is authoritative over this l
 
 ## Flow C: check the verdict and the refund
 
-Verdicts are written asynchronously, usually within a few minutes of the call. Verdikt's index of Base is itself a Verdikt service, `api`, whose free routes are listed (in its `openapi.json` and `llms.txt` like any service) but never judged and never paid:
+Verdicts are written asynchronously, usually within a few minutes of the call. Verdikt's indexer reads them off Base and serves them free and read-only; it is not a Verdikt service, so nothing about it is paid, proxied or judged:
 
 | Endpoint | Returns |
 |---|---|
-| `GET https://api.verdikt.bond/v1/services` | every registered service: `serviceId`, `slug`, `provider` |
-| `GET https://api.verdikt.bond/v1/verdicts?serviceId=<id>` | `outcome`, `payerChain`, `payer`, `paidAmount`, `failedClause`, `routeId`, `blockNumber`, `transactionHash` |
-| `GET https://api.verdikt.bond/v1/refunds?serviceId=<id>` | `payerChain`, `payer`, `amount` credited, `transactionHash` |
-| `GET https://api.verdikt.bond/v1/status` | `indexedThroughBlock`, `lastUpdated`: how fresh the index is |
+| `GET https://verdikt-indexer.denis-perov.workers.dev/v1/services` | every registered service: `serviceId`, `slug`, `provider` |
+| `GET https://verdikt-indexer.denis-perov.workers.dev/v1/verdicts?serviceId=<id>` | `outcome`, `payerChain`, `payer`, `paidAmount`, `failedClause`, `routeId`, `blockNumber`, `transactionHash` |
+| `GET https://verdikt-indexer.denis-perov.workers.dev/v1/refunds?serviceId=<id>` | `payerChain`, `payer`, `amount` credited, `transactionHash` |
+| `GET https://verdikt-indexer.denis-perov.workers.dev/v1/status` | `indexedThroughBlock`, `lastUpdated`: how fresh the index is |
 
 `serviceId` is `keccak256` of the slug's UTF-8 bytes (`cast keccak demo`, or viem's `keccak256(toBytes('demo'))`), or read it off `/v1/services`.
 

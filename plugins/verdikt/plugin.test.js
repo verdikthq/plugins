@@ -56,9 +56,13 @@ describe('verdikt plugin', () => {
     expect(frontmatter).toMatch(/^description: .+/m);
   });
 
-  it('reads verdicts from api.verdikt.bond, never a workers.dev host', () => {
-    expect(skill).toContain('https://api.verdikt.bond/v1/verdicts');
-    expect(skill).not.toMatch(/workers\.dev/);
+  it('reads services, verdicts, refunds and status from the indexer', () => {
+    const indexer = 'https://verdikt-indexer.denis-perov.workers.dev/v1';
+    for (const path of ['services', 'verdicts', 'refunds', 'status']) {
+      expect(skill).toContain(`${indexer}/${path}`);
+    }
+    // api.verdikt.bond is Verdikt's paid API and does not serve the index.
+    expect(skill).not.toMatch(/api\.verdikt\.bond/);
   });
 
   it('points at nothing private', () => {

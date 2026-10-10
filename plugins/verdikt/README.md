@@ -16,21 +16,23 @@ do not, or when a manifest names a file that is not here.
 ## What the skill relies on
 
 Everything the skill tells an agent to read is live HTTP served by Verdikt
-itself, never by this repository:
+and its indexer, never by this repository:
 
 - `https://verdikt.bond/llms.txt`, `https://<slug>.verdikt.bond/llms.txt` and
   `https://<slug>.verdikt.bond/.well-known/x402`. The global `llms.txt` is also
   the install prompt (`set up verdikt - https://verdikt.bond/llms.txt`), so it
   and the skill must say the same things: the skill treats the live guide as
   authoritative.
-- `https://api.verdikt.bond/v1/*`: verdicts and refunds, published as a
-  Verdikt service with free, listed-only routes. The skill never names an
-  account's `workers.dev` host.
+- `https://verdikt-indexer.denis-perov.workers.dev/v1/*`: services, verdicts,
+  refunds and index status, served free and read-only by Verdikt's indexer. It
+  is not a Verdikt service: `api.verdikt.bond` is reserved for Verdikt's own
+  paid endpoints and does not serve the index.
 - The vault and registry on Base Sepolia, read and called directly. Their
   addresses are written into the skill and change when Verdikt redeploys, so
   update them together with the deployment.
 
-No secrets, keys or account-specific URLs belong in this folder.
+No secrets or keys belong in this folder, and no account-specific URL other
+than the indexer's.
 
 ## Later: an MCP server
 
