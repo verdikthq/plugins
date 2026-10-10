@@ -1,0 +1,44 @@
+{
+  "name": "verdikt",
+  "version": "0.1.0",
+  "description": "Paid APIs whose every call is verified. Find x402 and MPP services on verdikt.bond, call them with your own payer, and read each call's on-chain verdict and refund: a call that breaks the provider's SLA is refunded from its bond, automatically.",
+  "author": {
+    "name": "Verdikt",
+    "url": "https://verdikt.bond"
+  },
+  "homepage": "https://verdikt.bond",
+  "repository": "https://github.com/verdikthq/plugins",
+  "license": "MIT",
+  "keywords": [
+    "x402",
+    "mpp",
+    "paid-api",
+    "sla",
+    "refund",
+    "agent-payments",
+    "usdc",
+    "base"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Verdikt",
+    "shortDescription": "Verified paid APIs, refunded on chain",
+    "longDescription": "Paid APIs whose every call is verified. Find x402 and MPP services on verdikt.bond, call them with your own payer, and read each call's on-chain verdict and refund: a call that breaks the provider's SLA is refunded from its bond, automatically.",
+    "developerName": "Verdikt",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive"
+    ],
+    "websiteURL": "https://verdikt.bond",
+    "privacyPolicyURL": "https://verdikt.bond/privacy",
+    "termsOfServiceURL": "https://verdikt.bond/terms",
+    "defaultPrompt": [
+      "List the paid APIs on Verdikt and what each promises.",
+      "Call the Verdikt demo service's /malformed route, then show me its verdict and the refund I'm owed.",
+      "Draft a Verdikt SLA for my paid API and walk me through registering it."
+    ],
+    "brandColor": "#ef4444",
+    "composerIcon": "./assets/logo.svg",
+    "logo": "./assets/logo.png"
+  }
+}
