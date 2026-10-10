@@ -11,10 +11,33 @@ This skill is plain HTTP plus whatever payer tool you already have. **It holds n
 
 The same guide, kept current with the live marketplace, is at `https://verdikt.bond/llms.txt`. Where this page and a live document disagree, the live document wins.
 
+## Deployment
+
+Verdikt runs on **Base mainnet**. Verdicts are written and refunds paid there, in real USDC:
+
+| | |
+|---|---|
+| Chain | Base, chain id `8453` (CAIP-2 `eip155:8453`) |
+| Public RPC | `https://mainnet.base.org` |
+| Explorer | `https://basescan.org` |
+| `VerdiktRegistry` (services, SLAs, bonds, verdicts) | `0xbd4a99ae4f0534f84089de2a21edb8dbfcae0deb` |
+| `VerdiktVault` (refunds owed and claimed) | `0x5dc9d2663a0fd884d2bd55ada839e0a50fbe1cc4` |
+| USDC (bonds and refunds) | `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` |
+| Fixed refund cap per call (`FIXED_REFUND`) | 1 USDC (`1000000`) |
+
+Calls themselves are paid on whichever network a service's 402 offers: Base, Solana or Tempo.
+
+## Scripts
+
+`scripts/` next to this file holds two Node scripts (Node 22+). Install their dependencies once with `npm install` in that folder; they need only `viem` and `@noble/curves` / `@noble/hashes`. Both ask before sending anything, and `BASE_RPC_URL` overrides the public RPC.
+
+- `claim-refund.mjs`: read what a payer is owed, or claim it with a claim signed by the key that paid (Flow C).
+- `register-service.mjs`: draft an SLA for a provider's API and register it (Flow D).
+
 ## Guardrails
 
 - **Never pay, move funds or claim a refund without the user's explicit confirmation.** State the URL, the price, the network and the asset first.
-- **Say which network you are on before paying.** Today Verdikt runs on testnets: refunds and verdicts on **Base Sepolia**, payments on Base Sepolia, **Tempo testnet** (Moderato) and Solana devnet. Testnet funds have no value; say so, and never send mainnet funds to a testnet service.
+- **Say which network and asset you are paying with before paying.** Verdikt runs on mainnet: every call costs real money (USDC on Base or Solana, USDC.e on Tempo), and a bond posted to register a service is real USDC.
 - **Never retry a paid call blindly.** A retry is a new payment. If a call failed, read its verdict (Flow C) instead: a failure that breaks the SLA is refunded on its own.
 - Only paths an SLA route declares are judged. Calling any other path is relayed but never refunded.
 
@@ -54,7 +77,7 @@ A 4xx is not judged when the SLA cannot be read, and a 402 is never judged: the 
 
 ### Refund rule
 
-A FAIL or DOWN is refunded **only** for calls paid in USDC or USDC.e (or each testnet's stand-in, such as pathUSD on Tempo testnet), in USDC on Base, **to the key that paid**. The refund is the smallest of three amounts: the registry's fixed refund (`FIXED_REFUND`, 1 USDC by default; read it with `cast call <registry> "FIXED_REFUND()(uint256)" --rpc-url https://sepolia.base.org`), what you paid, and what is left of the provider's bond. A call that cost more than the fixed refund is only partly refunded. A call paid any other way is still judged and scored, and refunded nothing. The `llms.txt` line `(refundable)` / `(not refundable)` says which payment options qualify.
+A FAIL or DOWN is refunded **only** for calls paid in USDC or USDC.e, in USDC on Base, **to the key that paid**. The refund is the smallest of three amounts: the registry's fixed refund (`FIXED_REFUND`, 1 USDC by default; read it with `cast call 0xbd4a99ae4f0534f84089de2a21edb8dbfcae0deb "FIXED_REFUND()(uint256)" --rpc-url https://mainnet.base.org`), what you paid, and what is left of the provider's bond. A call that cost more than the fixed refund is only partly refunded. A call paid any other way is still judged and scored, and refunded nothing. The `llms.txt` line `(refundable)` / `(not refundable)` says which payment options qualify.
 
 ## Flow B: call a service
 
@@ -74,7 +97,7 @@ Setup: read `https://agents.circle.com/skills/setup.md` and follow it (it instal
 
 ```bash
 circle services pay "https://demo.verdikt.bond/quote" -X POST \
-  --address <your agent wallet> --chain BASE-SEPOLIA --data '{"symbol":"ETH"}'
+  --address <your agent wallet> --chain BASE --data '{"symbol":"ETH"}'
 ```
 
 `--chain` must be a chain the 402 accepts and where the wallet holds USDC.
@@ -89,16 +112,16 @@ pay curl -X POST -H 'content-type: application/json' -d '{"symbol":"ETH"}' https
 
 ### Tempo CLI (MPP on Tempo)
 
-Setup: `Read https://tempo.xyz/SKILL.md and set up tempo` (installs with `curl -fsSL https://tempo.xyz/install | bash`). Docs: <https://tempo.xyz/developers/docs/cli>. Preview the cost first with `--dry-run`, cap it with `--max-spend`, and use `-t` for compact output. The CLI pays on Tempo **mainnet** unless told otherwise, and refuses a challenge for another chain before paying, so a testnet service such as `demo` needs `--network testnet` (Moderato) on every command, or `TEMPO_WALLET_NETWORK` set to it.
+Setup: `Read https://tempo.xyz/SKILL.md and set up tempo` (installs with `curl -fsSL https://tempo.xyz/install | bash`). Docs: <https://tempo.xyz/developers/docs/cli>. Preview the cost first with `--dry-run`, cap it with `--max-spend`, and use `-t` for compact output. The CLI pays on Tempo mainnet, which is where Verdikt services' MPP challenges are.
 
 ```bash
-tempo request -t --network testnet --dry-run -X POST --json '{"symbol":"ETH"}' https://demo.verdikt.bond/malformed
-tempo request -t --network testnet --max-spend 0.01 -X POST --json '{"symbol":"ETH"}' https://demo.verdikt.bond/malformed
+tempo request -t --dry-run -X POST --json '{"symbol":"ETH"}' https://demo.verdikt.bond/malformed
+tempo request -t --max-spend 0.01 -X POST --json '{"symbol":"ETH"}' https://demo.verdikt.bond/malformed
 ```
 
 ### Try it: the `demo` service
 
-`demo` is a mock price API whose routes break its SLA on purpose, 0.001 USDC (or pathUSD on Tempo testnet) a call, payable with x402 on Base Sepolia or MPP on Tempo testnet. All take `POST` with `{"symbol":"ETH"}` (BTC, ETH, SOL or USDC):
+`demo` is a mock price API whose routes break its SLA on purpose, 0.001 USDC a call, payable with x402 on Base (USDC) or MPP on Tempo (USDC.e). It costs real money, so try one route at a time. All take `POST` with `{"symbol":"ETH"}` (BTC, ETH, SOL or USDC):
 
 - `/quote` delivers and PASSes.
 - `/slow` answers past the latency bound: FAIL `responds-within-8s`.
@@ -131,34 +154,39 @@ Reading a verdict:
 
 ### What you are owed
 
-Refunds are booked in the `VerdiktVault` on Base, keyed by `(payerChain, payer)`: `payerChain = keccak256(<CAIP-2 network you paid on>)`, e.g. `keccak256("eip155:84532")` for Base Sepolia, `keccak256("eip155:42431")` for Tempo testnet, `keccak256("solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1")` for Solana devnet. On the current Base Sepolia deployment (chain id 84532) the vault is `0x2cde82ebebcedfd30eca2703b067ce2ddf2c09fa` and the registry `0xb532e13ce953d1fa587716ca1ef6fc7781e2e8a8`. Verdikt redeploys while it is on testnet: if a call to either reverts or returns nothing, check the addresses on <https://verdikt.bond> before trusting a zero.
+Refunds are booked in the `VerdiktVault` on Base (address in the Deployment section), keyed by `(payerChain, payer)`: `payerChain = keccak256(<CAIP-2 network you paid on>)`, e.g. `keccak256("eip155:8453")` for Base, `keccak256("eip155:4217")` for Tempo, `keccak256("solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp")` for Solana.
 
 ```bash
-cast call <vault> "getOwed(bytes32,bytes32)(uint256)" <payerChain> <payer> --rpc-url https://sepolia.base.org
+node scripts/claim-refund.mjs --network <CAIP-2 you paid on> --payer <your address or Solana public key>
 ```
 
-The result is in USDC minor units (6 decimals).
+Or directly: `cast call 0x5dc9d2663a0fd884d2bd55ada839e0a50fbe1cc4 "getOwed(bytes32,bytes32)(uint256)" <payerChain> <payer> --rpc-url https://mainnet.base.org`, in USDC minor units (6 decimals).
 
 ### Claiming (only with the user's confirmation)
 
 - **An EVM payer** with Base gas calls `withdraw(payerChain)` on the vault from the key that paid.
-- **A Solana payer or a Tempo passkey account** has no Base account: it signs a claim with the key that paid, and any funded Base key relays it. The signature covers the recipient and amount, so the relayer can only pass it on:
-  1. Build a claim `(payerChain, recipient, amount, validBefore, nonce)`: `recipient` is the Base address to pay, `amount` at most `getOwed`, `validBefore` a unix time about an hour ahead, `nonce` 32 random bytes.
-  2. Get the digest to sign: `cast call <vault> "claimDigest(bytes32,address,uint256,uint256,bytes32)(bytes32)" <payerChain> <recipient> <amount> <validBefore> <nonce> --rpc-url https://sepolia.base.org`.
-  3. Sign the 32-byte digest with the key that paid: ed25519 for a Solana payer, P-256 (low-s) for a Tempo passkey.
-  4. Any key with Base gas submits it: `withdrawWithEd25519(bytes32 payer, (bytes32,address,uint256,uint256,bytes32) claim, bytes signature)`, where `payer` is the Solana public key's 32 bytes, or `withdrawWithP256(bytes32 x, bytes32 y, bool prehash, claim, bytes32 r, bytes32 s)` for a passkey (`prehash` when the key signed `sha256(digest)`).
+- **A Solana payer or a Tempo passkey account** has no Base account: it signs a claim with the key that paid, and any key with Base gas relays it. The signature covers the recipient and amount, so the relayer can only pass it on:
 
-  Never ask the user for a secret key in chat. Have them sign with their own wallet or tool, and only relay the signature.
+  ```bash
+  PAYER_SECRET_KEY=… RELAYER_PRIVATE_KEY=… node scripts/claim-refund.mjs \
+    --network <CAIP-2 you paid on> --key ed25519 --recipient <Base address to pay>
+  ```
+
+  Use `--key ed25519` for a Solana payer and `--key p256` for a Tempo passkey (add `--prehash` if the key signs `sha256(digest)`). Under the hood the script reads the vault's `claimDigest(payerChain, recipient, amount, validBefore, nonce)`, signs it, and submits `withdrawWithEd25519(bytes32 payer, claim, bytes signature)` or `withdrawWithP256(bytes32 x, bytes32 y, bool prehash, claim, bytes32 r, bytes32 s)`, where `claim` is `(bytes32 payerChain, address recipient, uint256 amount, uint256 validBefore, bytes32 nonce)`.
+
+  The user sets `PAYER_SECRET_KEY` in their own shell. **Never ask for a secret key in chat or put one in a command you echo.**
 - **In a browser:** <https://verdikt.bond/withdraw>.
 
 ## Flow D: register an API (providers)
 
 A provider with an existing x402 or MPP paid API can put it behind Verdikt:
 
-1. Draft an SLA from the API's base URL. `POST https://verdikt.bond/discovery/sla` reads the API's OpenAPI document and live 402s and streams a drafted SLA, slug and description as NDJSON.
+1. Draft an SLA from the API's base URL: `node scripts/register-service.mjs <base URL> --dry-run`. It calls `POST https://verdikt.bond/discovery/sla`, which reads the API's OpenAPI document and live 402s and streams a drafted SLA, slug and description as NDJSON.
 2. **Review every clause with the user.** Each one is a promise the bond is docked for, with no appeal.
-3. Post the bond and register in the web wizard at <https://verdikt.bond/provider>, with the provider's own wallet: one USDC approve on the vault, then one `register`.
+3. Register, with a bond: `PROVIDER_PRIVATE_KEY=… node scripts/register-service.mjs <base URL> --bond <USDC>` (one USDC approve on the vault, then one `register` on the registry; that key owns the service), or the web wizard at <https://verdikt.bond/provider> with the provider's own wallet. The bond is any amount, real USDC: only a bond refunds a FAIL, and each refund is capped at `FIXED_REFUND` (1 USDC). Without one the service is still judged and scored, but refunds nothing.
 4. Share `https://<slug>.verdikt.bond`: calls through it are judged, calls straight to the provider are not.
+
+If the API is already listed on Verdikt, its owner can take the listing over by signing a message with the wallet the service's 402 pays (its `payTo`), on <https://verdikt.bond>.
 
 ## Not yet
 

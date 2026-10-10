@@ -27,9 +27,10 @@ and its indexer, never by this repository:
   refunds and index status, served free and read-only by Verdikt's indexer. It
   is not a Verdikt service: `api.verdikt.bond` is reserved for Verdikt's own
   paid endpoints and does not serve the index.
-- The vault and registry on Base Sepolia, read and called directly. Their
-  addresses are written into the skill and change when Verdikt redeploys, so
-  update them together with the deployment.
+- The vault and registry on Base mainnet, read and called directly. Their
+  addresses are in the skill's Deployment section and in
+  `skills/verdikt/scripts/deployment.js`; the test keeps the two equal. Update
+  both when Verdikt redeploys.
 
 No secrets or keys belong in this folder, and no account-specific URL other
 than the indexer's.

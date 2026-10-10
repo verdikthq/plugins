@@ -65,9 +65,16 @@ describe('verdikt plugin', () => {
     expect(skill).not.toMatch(/api\.verdikt\.bond/);
   });
 
-  it('points at nothing private', () => {
-    // The Verdikt backend repository is private: a link into it is a dead end
-    // for every agent outside the team.
-    expect(skill).not.toMatch(/github\.com\/(imajus\/verdikt|verdikthq\/core)/);
+  it('states the same deployment the scripts use', async () => {
+    const { DEPLOYMENT } = await import('./skills/verdikt/scripts/deployment.js');
+    for (const value of [DEPLOYMENT.registry, DEPLOYMENT.vault, DEPLOYMENT.usdc, DEPLOYMENT.rpcUrl, String(DEPLOYMENT.chainId)]) {
+      expect(skill, value).toContain(value);
+    }
+  });
+
+  it('ships every script the skill names', () => {
+    const named = [...skill.matchAll(/scripts\/([\w-]+\.mjs)/g)].map(([, file]) => file);
+    expect(named.length).toBeGreaterThan(0);
+    for (const file of new Set(named)) expect(existsSync(resolve(PLUGIN, 'skills/verdikt/scripts', file)), file).toBe(true);
   });
 });

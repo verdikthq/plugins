@@ -20,8 +20,8 @@ call's verdict and refund. It holds no wallet and never pays on its own.
 To pay for calls, the agent needs an x402 or MPP payer of its own, for example
 [Circle Agent Wallet](https://developers.circle.com/agent-stack),
 [pay.sh](https://pay.sh/docs/get-started/install) or the
-[Tempo CLI](https://tempo.xyz/developers/docs/cli). Verdikt currently runs on
-testnets (Base Sepolia, Tempo Moderato, Solana devnet).
+[Tempo CLI](https://tempo.xyz/developers/docs/cli). Verdikt runs on Base
+mainnet: calls, bonds and refunds are real USDC.
 
 ## Layout
 
@@ -30,6 +30,7 @@ testnets (Base Sepolia, Tempo Moderato, Solana devnet).
 .cursor-plugin/marketplace.json   Cursor marketplace listing
 plugins/verdikt/                  the Verdikt plugin
   skills/verdikt/SKILL.md         the one skill every format ships
+  skills/verdikt/scripts/         refund claim and service registration scripts
   .claude-plugin/plugin.json      Claude Code manifest
   .cursor-plugin/plugin.json      Cursor manifest
   .codex-plugin/plugin.json       Codex manifest
@@ -49,7 +50,12 @@ npm test
 ```
 
 The test fails when the manifests disagree on name or version, when a manifest
-names a file that isn't here, or when the skill points at anything private.
+names a file that isn't here, when the skill and `scripts/deployment.js` state
+different addresses, or when the skill names a script that isn't shipped.
+
+The skill's scripts install separately: `npm install` in
+`plugins/verdikt/skills/verdikt/scripts`. They depend only on `viem` and
+`@noble/curves` / `@noble/hashes`.
 
 ## License
 
