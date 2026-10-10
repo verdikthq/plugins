@@ -186,7 +186,7 @@ A provider with an existing x402 or MPP paid API can put it behind Verdikt:
 3. Register, with a bond: `PROVIDER_PRIVATE_KEY=… node scripts/register-service.mjs <base URL> --bond <USDC>` (one USDC approve on the vault, then one `register` on the registry; that key owns the service), or the web wizard at <https://verdikt.bond/provider> with the provider's own wallet. The bond is any amount, real USDC: only a bond refunds a FAIL, and each refund is capped at `FIXED_REFUND` (1 USDC). Without one the service is still judged and scored, but refunds nothing.
 4. Share `https://<slug>.verdikt.bond`: calls through it are judged, calls straight to the provider are not.
 
-If the API is already listed on Verdikt, its owner can take the listing over by signing a message with the wallet the service's 402 pays (its `payTo`), on <https://verdikt.bond>.
+**Coming soon:** if the API is already listed on Verdikt, its owner will be able to take the listing over by signing a message with the wallet the service's 402 pays (its `payTo`). This is not live yet: don't send a provider to do it, and don't register a second listing for an API that is already listed.
 
 ## Not yet
 
