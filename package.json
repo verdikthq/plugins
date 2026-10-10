@@ -1,0 +1,15 @@
+{
+  "name": "verdikt-plugins",
+  "private": true,
+  "type": "module",
+  "description": "Verdikt agent plugins and skills",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

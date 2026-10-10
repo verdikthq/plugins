@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Verdikt mark (V1b-1 Cap) — transparent bg, for favicon.svg / inline use -->
+  <rect x="106" y="48" width="44" height="124" rx="22" fill="#cbd5e1"/>
+  <circle cx="128" cy="172" r="42" fill="#cbd5e1"/>
+  <rect x="114" y="70" width="28" height="102" rx="14" fill="#ef4444"/>
+  <circle cx="128" cy="172" r="31" fill="#ef4444"/>
+</svg>

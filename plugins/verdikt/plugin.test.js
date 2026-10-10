@@ -1,0 +1,69 @@
+// The plugin ships one skill through three manifest formats and two
+// marketplaces. Nothing builds them, so this is what keeps them in step.
+
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+const PLUGIN = import.meta.dirname;
+const ROOT = resolve(PLUGIN, '../..');
+const read = (/** @type {string} */ path) => JSON.parse(readFileSync(path, 'utf8'));
+
+const manifests = {
+  cursor: read(resolve(PLUGIN, '.cursor-plugin/plugin.json')),
+  claude: read(resolve(PLUGIN, '.claude-plugin/plugin.json')),
+  codex: read(resolve(PLUGIN, '.codex-plugin/plugin.json'))
+};
+const marketplaces = {
+  cursor: read(resolve(ROOT, '.cursor-plugin/marketplace.json')),
+  claude: read(resolve(ROOT, '.claude-plugin/marketplace.json'))
+};
+const skill = readFileSync(resolve(PLUGIN, 'skills/verdikt/SKILL.md'), 'utf8');
+
+describe('verdikt plugin', () => {
+  it('names one plugin, at one version, in every manifest', () => {
+    const { version } = manifests.claude;
+    for (const manifest of Object.values(manifests)) {
+      expect(manifest.name).toBe('verdikt');
+      expect(manifest.version).toBe(version);
+    }
+    expect(marketplaces.cursor.metadata.version).toBe(version);
+    expect(marketplaces.claude.plugins[0].version).toBe(version);
+  });
+
+  it('lists this folder in both marketplaces', () => {
+    for (const marketplace of Object.values(marketplaces)) {
+      const [entry] = marketplace.plugins;
+      expect(entry.name).toBe('verdikt');
+      expect(resolve(ROOT, entry.source)).toBe(PLUGIN);
+    }
+  });
+
+  it('names only files that are here', () => {
+    const paths = [
+      manifests.cursor.skills,
+      manifests.cursor.logo,
+      manifests.codex.skills,
+      manifests.codex.interface.logo,
+      manifests.codex.interface.composerIcon
+    ];
+    for (const path of paths) expect(existsSync(resolve(PLUGIN, path)), path).toBe(true);
+  });
+
+  it('ships a skill named verdikt', () => {
+    const frontmatter = /^---\n([\s\S]*?)\n---\n/.exec(skill)?.[1] ?? '';
+    expect(frontmatter).toMatch(/^name: verdikt$/m);
+    expect(frontmatter).toMatch(/^description: .+/m);
+  });
+
+  it('reads verdicts from api.verdikt.bond, never a workers.dev host', () => {
+    expect(skill).toContain('https://api.verdikt.bond/v1/verdicts');
+    expect(skill).not.toMatch(/workers\.dev/);
+  });
+
+  it('points at nothing private', () => {
+    // The Verdikt backend repository is private: a link into it is a dead end
+    // for every agent outside the team.
+    expect(skill).not.toMatch(/github\.com\/(imajus\/verdikt|verdikthq\/core)/);
+  });
+});

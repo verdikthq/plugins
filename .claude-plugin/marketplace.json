@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "verdikt",
+  "description": "Paid APIs whose every call is verified. Find x402 and MPP services on verdikt.bond, call them with your own payer, and read each call's on-chain verdict and refund: a call that breaks the provider's SLA is refunded from its bond, automatically.",
+  "owner": {
+    "name": "Verdikt",
+    "url": "https://verdikt.bond"
+  },
+  "plugins": [
+    {
+      "name": "verdikt",
+      "source": "./plugins/verdikt",
+      "description": "Paid APIs whose every call is verified. Find x402 and MPP services on verdikt.bond, call them with your own payer, and read each call's on-chain verdict and refund: a call that breaks the provider's SLA is refunded from its bond, automatically.",
+      "version": "0.1.0",
+      "category": "development",
+      "tags": [
+        "x402",
+        "mpp",
+        "paid-api",
+        "sla",
+        "refund",
+        "agent-payments",
+        "usdc",
+        "base"
+      ]
+    }
+  ]
+}
