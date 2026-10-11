@@ -1,6 +1,6 @@
 {
   "name": "verdikt",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Paid APIs whose every call is verified. Find x402 and MPP services on verdikt.bond, call them with your own payer, and read each call's on-chain verdict and refund: a call that breaks the provider's SLA is refunded from its bond, automatically.",
   "author": {
     "name": "Verdikt",
