@@ -5,7 +5,7 @@ description: Find, call and check paid APIs (x402 or MPP) whose every paid call 
 
 # Verdikt
 
-Verdikt is a proxy in front of x402 and MPP paid APIs. Every paid call made through `https://<slug>.verdikt.bond` is relayed to the provider unmodified, then judged against the SLA the provider published on Base: latency, response schema, price, and model-judged quality. A call that breaks the SLA is refunded on chain from the provider's bond. You pay exactly as you would pay the provider directly; nothing in the request or the response changes.
+Verdikt is a proxy in front of x402 and MPP paid APIs. Every paid call made through `https://<slug>.verdikt.bond` is relayed to the provider unmodified, then judged against the SLA the provider published (pinned on IPFS, with its hash on Base): latency, response schema, price, and model-judged quality. A call that breaks the SLA is refunded on chain from the provider's bond. You pay exactly as you would pay the provider directly; nothing in the request or the response changes.
 
 This skill is plain HTTP plus whatever payer tool you already have. **It holds no wallet and never pays.** Without a payer tool (Flow B) you can browse services and read verdicts, but not call a paid route.
 
@@ -20,8 +20,8 @@ Verdikt runs on **Base mainnet**. Verdicts are written and refunds paid there, i
 | Chain | Base, chain id `8453` (CAIP-2 `eip155:8453`) |
 | Public RPC | `https://mainnet.base.org` |
 | Explorer | `https://basescan.org` |
-| `VerdiktRegistry` (services, SLAs, bonds, verdicts) | `0xbd4a99ae4f0534f84089de2a21edb8dbfcae0deb` |
-| `VerdiktVault` (refunds owed and claimed) | `0x5dc9d2663a0fd884d2bd55ada839e0a50fbe1cc4` |
+| `VerdiktRegistry` (services, SLA hashes and CIDs, verdicts) | `0x165311c64749d5fab9589b8dae11e501eb242c62` |
+| `VerdiktVault` (refunds owed and claimed) | `0xabd7f415357a0e56ac3c811654f1b1c2aa77f436` |
 | USDC (bonds and refunds) | `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` |
 | Fixed refund cap per call (`FIXED_REFUND`) | 1 USDC (`1000000`) |
 
@@ -77,7 +77,7 @@ A 4xx is not judged when the SLA cannot be read, and a 402 is never judged: the 
 
 ### Refund rule
 
-A FAIL or DOWN is refunded **only** for calls paid in USDC or USDC.e, in USDC on Base, **to the key that paid**. The refund is the smallest of three amounts: the registry's fixed refund (`FIXED_REFUND`, 1 USDC by default; read it with `cast call 0xbd4a99ae4f0534f84089de2a21edb8dbfcae0deb "FIXED_REFUND()(uint256)" --rpc-url https://mainnet.base.org`), what you paid, and what is left of the provider's bond. A call that cost more than the fixed refund is only partly refunded. A call paid any other way is still judged and scored, and refunded nothing. The `llms.txt` line `(refundable)` / `(not refundable)` says which payment options qualify.
+A FAIL or DOWN is refunded **only** for calls paid in USDC or USDC.e, in USDC on Base, **to the key that paid**. The refund is the smallest of three amounts: the registry's fixed refund (`FIXED_REFUND`, 1 USDC by default; read it with `cast call 0x165311c64749d5fab9589b8dae11e501eb242c62 "FIXED_REFUND()(uint256)" --rpc-url https://mainnet.base.org`), what you paid, and what is left of the provider's bond. A call that cost more than the fixed refund is only partly refunded. A call paid any other way is still judged and scored, and refunded nothing. The `llms.txt` line `(refundable)` / `(not refundable)` says which payment options qualify.
 
 ## Flow B: call a service
 
@@ -137,7 +137,8 @@ Verdicts are written asynchronously, usually within a few minutes of the call. V
 | Endpoint | Returns |
 |---|---|
 | `GET https://verdikt-indexer.denis-perov.workers.dev/v1/services` | every registered service: `serviceId`, `slug`, `provider` |
-| `GET https://verdikt-indexer.denis-perov.workers.dev/v1/verdicts?serviceId=<id>` | `outcome`, `payerChain`, `payer`, `paidAmount`, `failedClause`, `routeId`, `blockNumber`, `transactionHash` |
+| `GET https://verdikt-indexer.denis-perov.workers.dev/v1/verdicts?serviceId=<id>` | `outcome`, `payerChain`, `payer`, `paidAmount`, `failedClause`, `routeId`, `slaHash`, `blockNumber`, `transactionHash` |
+| `GET https://verdikt-indexer.denis-perov.workers.dev/v1/sla-versions?serviceId=<id>` | every SLA version the service has published: `slaHash`, `slaCid`, `blockNumber` |
 | `GET https://verdikt-indexer.denis-perov.workers.dev/v1/refunds?serviceId=<id>` | `payerChain`, `payer`, `amount` credited, `transactionHash` |
 | `GET https://verdikt-indexer.denis-perov.workers.dev/v1/status` | `indexedThroughBlock`, `lastUpdated`: how fresh the index is |
 
@@ -149,7 +150,8 @@ Reading a verdict:
 
 - `outcome`: `0` PASS, `1` FAIL (a response arrived and broke a clause), `2` DOWN (paid, nothing usable came back).
 - `routeId`: `keccak256` of the route's id, which is its `id` if the SLA gives one, else `"METHOD /path"` (e.g. `keccak256("POST /malformed")`). Zero means the call was judged on status alone.
-- `failedClause`: `keccak256` of the failing clause's `id` (e.g. `keccak256("quote-shape")`), or zero on a PASS. To name it, hash each clause id of the matched route, then the SLA's top-level `clauses` (older SLAs' defaults), and compare; `keccak256("delivery")` is the implicit delivery clause. A non-zero hash that matches nothing means the provider has edited its SLA since.
+- `failedClause`: `keccak256` of the failing clause's `id` (e.g. `keccak256("quote-shape")`), or zero on a PASS. To name it, hash each clause id of the matched route, then the SLA's top-level `clauses` (older SLAs' defaults), and compare; `keccak256("delivery")` is the implicit delivery clause.
+- `slaHash`: which SLA version the call was judged against, zero when judged on status alone. Resolve `routeId` and `failedClause` against that version, not the current one: find its `slaCid` in `/v1/sla-versions`, fetch `https://ipfs.io/ipfs/<slaCid>` (any IPFS gateway), and check that `keccak256` of the bytes equals `slaHash` before trusting it.
 - The observed value is never on chain. The dashboard page `https://verdikt.bond/services/<slug>` shows each verdict with its clause.
 
 ### What you are owed
@@ -160,7 +162,7 @@ Refunds are booked in the `VerdiktVault` on Base (address in the Deployment sect
 node scripts/claim-refund.mjs --network <CAIP-2 you paid on> --payer <your address or Solana public key>
 ```
 
-Or directly: `cast call 0x5dc9d2663a0fd884d2bd55ada839e0a50fbe1cc4 "getOwed(bytes32,bytes32)(uint256)" <payerChain> <payer> --rpc-url https://mainnet.base.org`, in USDC minor units (6 decimals).
+Or directly: `cast call 0xabd7f415357a0e56ac3c811654f1b1c2aa77f436 "getOwed(bytes32,bytes32)(uint256)" <payerChain> <payer> --rpc-url https://mainnet.base.org`, in USDC minor units (6 decimals).
 
 ### Claiming (only with the user's confirmation)
 
@@ -181,9 +183,9 @@ Or directly: `cast call 0x5dc9d2663a0fd884d2bd55ada839e0a50fbe1cc4 "getOwed(byte
 
 A provider with an existing x402 or MPP paid API can put it behind Verdikt:
 
-1. Draft an SLA from the API's base URL: `node scripts/register-service.mjs <base URL> --dry-run`. It calls `POST https://verdikt.bond/discovery/sla`, which reads the API's OpenAPI document and live 402s and streams a drafted SLA, slug and description as NDJSON.
+1. Draft an SLA from the API's base URL: `node scripts/register-service.mjs <base URL> --dry-run`. It calls `POST https://verdikt.bond/discovery/sla`, which reads the API's OpenAPI document and live 402s and streams a drafted SLA, slug and description as NDJSON. Nothing is pinned or sent in a dry run.
 2. **Review every clause with the user.** Each one is a promise the bond is docked for, with no appeal.
-3. Register, with a bond: `PROVIDER_PRIVATE_KEY=… node scripts/register-service.mjs <base URL> --bond <USDC>` (one USDC approve on the vault, then one `register` on the registry; that key owns the service), or the web wizard at <https://verdikt.bond/provider> with the provider's own wallet. The bond is any amount, real USDC: only a bond refunds a FAIL, and each refund is capped at `FIXED_REFUND` (1 USDC). Without one the service is still judged and scored, but refunds nothing.
+3. Register, with a bond: `PROVIDER_PRIVATE_KEY=… node scripts/register-service.mjs <base URL> --bond <USDC>` (the SLA is pinned on IPFS through `POST https://verdikt.bond/discovery/sla/pin`, then one USDC approve on the vault and one `register` of the SLA's hash and CID on the registry; that key owns the service), or the web wizard at <https://verdikt.bond/provider> with the provider's own wallet. The bond is any amount, real USDC: only a bond refunds a FAIL, and each refund is capped at `FIXED_REFUND` (1 USDC). Without one the service is still judged and scored, but refunds nothing.
 4. Share `https://<slug>.verdikt.bond`: calls through it are judged, calls straight to the provider are not.
 
 **Coming soon:** if the API is already listed on Verdikt, its owner will be able to take the listing over by signing a message with the wallet the service's 402 pays (its `payTo`). This is not live yet: don't send a provider to do it, and don't register a second listing for an API that is already listed.

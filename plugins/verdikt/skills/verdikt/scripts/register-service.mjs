@@ -8,18 +8,20 @@
 // sent until it is confirmed: every clause is a promise the bond is docked
 // for, with no appeal. --bond is the USDC posted to refund FAILs from (any
 // amount, default 0: without a bond, calls are still judged and scored but
-// nothing is refunded). Registering is one USDC approve on the vault for the
-// bond (skipped when the bond is 0 or already allowed) and one register on the
-// registry, from PROVIDER_PRIVATE_KEY, which needs Base gas and the bond in
-// USDC and becomes the service's owner. BASE_RPC_URL overrides the public RPC.
+// nothing is refunded). Registering pins the SLA on IPFS through discovery,
+// which answers its hash and CID, then sends one USDC approve on the vault for
+// the bond (skipped when the bond is 0 or already allowed) and one register of
+// that hash and CID on the registry, from PROVIDER_PRIVATE_KEY, which needs
+// Base gas and the bond in USDC and becomes the service's owner. BASE_RPC_URL
+// overrides the public RPC.
 
 import { parseArgs } from 'node:util';
-import { parseAbi, parseUnits } from 'viem';
+import { keccak256, parseAbi, parseUnits, toBytes } from 'viem';
 import { DEPLOYMENT } from './deployment.js';
 import { confirm, walletFromEnv } from './lib.js';
 
 const registryAbi = parseAbi([
-  'function register(string slug, string url, string sla, string description, uint256 bond) returns (bytes32)'
+  'function register(string slug, string url, bytes32 slaHash, string slaCid, string description, uint256 bond) returns (bytes32)'
 ]);
 const erc20Abi = parseAbi([
   'function allowance(address owner, address spender) view returns (uint256)',
@@ -55,6 +57,25 @@ async function draftSla(url) {
   return draft;
 }
 
+/**
+ * Pins the SLA on IPFS through discovery and answers what `register` commits
+ * to. The registry stores only the hash, so the hash discovery answers must be
+ * of exactly the text shown to the user.
+ */
+async function pinSla(sla) {
+  const response = await fetch(`${DEPLOYMENT.discoveryUrl}/discovery/sla/pin`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sla })
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(`discovery could not pin the SLA (${response.status}): ${body.detail ?? body.error ?? 'no detail'}`);
+  if (body.slaHash !== keccak256(toBytes(sla)) || typeof body.slaCid !== 'string' || !body.slaCid) {
+    throw new Error('discovery pinned something other than the SLA shown; nothing was sent');
+  }
+  return { slaHash: body.slaHash, slaCid: body.slaCid };
+}
+
 const { values, positionals } = parseArgs({ allowPositionals: true, options: { slug: { type: 'string' }, bond: { type: 'string', default: '0' }, 'dry-run': { type: 'boolean', default: false } } });
 const [url] = positionals;
 if (!url) throw new Error('usage: node register-service.mjs <base URL> [--bond <USDC>] [--slug <slug>] [--dry-run]');
@@ -76,6 +97,8 @@ if (!(await confirm(`Register ${slug} on ${DEPLOYMENT.network} as ${client.accou
   process.exit(0);
 }
 
+const { slaHash, slaCid } = await pinSla(draft.sla);
+console.log(`SLA pinned at ipfs://${slaCid}`);
 const usdc = /** @type {`0x${string}`} */ (DEPLOYMENT.usdc);
 const vault = /** @type {`0x${string}`} */ (DEPLOYMENT.vault);
 const allowance = bond === 0n ? 0n : await client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [client.account.address, vault] });
@@ -84,6 +107,6 @@ if (bond > 0n && allowance < bond) {
   // register is simulated against the allowance, so wait for it to be mined.
   if ((await client.waitForTransactionReceipt({ hash })).status !== 'success') throw new Error(`approve reverted: ${DEPLOYMENT.explorer}/tx/${hash}`);
 }
-const hash = await client.writeContract({ address: registry, abi: registryAbi, functionName: 'register', args: [slug, url, draft.sla, draft.description ?? '', bond] });
+const hash = await client.writeContract({ address: registry, abi: registryAbi, functionName: 'register', args: [slug, url, slaHash, slaCid, draft.description ?? '', bond] });
 if ((await client.waitForTransactionReceipt({ hash })).status !== 'success') throw new Error(`register reverted: ${DEPLOYMENT.explorer}/tx/${hash}`);
 console.log(`registered: https://${slug}.verdikt.bond (${DEPLOYMENT.explorer}/tx/${hash})`);
