@@ -32,7 +32,7 @@ Calls themselves are paid on whichever network a service's 402 offers: Base, Sol
 `scripts/` next to this file holds two Node scripts (Node 22+). Install their dependencies once with `npm install` in that folder; they need only `viem` and `@noble/curves` / `@noble/hashes`. Both ask before sending anything, and `BASE_RPC_URL` overrides the public RPC.
 
 - `claim-refund.mjs`: read what a payer is owed, or claim it with a claim signed by the key that paid (Flow C).
-- `register-service.mjs`: draft an SLA for a provider's API and register it (Flow D).
+- `register-service.mjs`: draft an SLA covering every paid route of a provider's API and register it (Flow D).
 
 ## Guardrails
 
@@ -183,8 +183,11 @@ Or directly: `cast call 0xabd7f415357a0e56ac3c811654f1b1c2aa77f436 "getOwed(byte
 
 A provider with an existing x402 or MPP paid API can put it behind Verdikt:
 
-1. Draft an SLA from the API's base URL: `node scripts/register-service.mjs <base URL> --dry-run`. It calls `POST https://verdikt.bond/discovery/sla`, which reads the API's OpenAPI document and live 402s and streams a drafted SLA, slug and description as NDJSON. Nothing is pinned or sent in a dry run.
-2. **Review every clause with the user.** Each one is a promise the bond is docked for, with no appeal.
+1. Draft an SLA from the API's base URL: `node scripts/register-service.mjs <base URL> --dry-run`. Discovery drafts it in parts: `POST https://verdikt.bond/discovery/sla/plan` lists every operation the API publishes (from its OpenAPI document and live 402s), `POST …/sla/route` drafts each chosen route separately (the script runs several at once), and `POST …/sla/assemble` joins them into one SLA with a slug and description. **Every paid route is covered by default**, however many there are. Nothing is pinned or sent in a dry run.
+   - To leave routes out (for example operations the API serves again on a network where calls can't be refunded), add `--exclude "POST /search"` for each. A route the SLA doesn't declare is never judged or refunded.
+   - The draft ends with the routes **not covered**: those left out, and those that could not be drafted (with the reason). Show this list to the user; if a route they want covered failed, re-run, since drafting is retried from scratch.
+   - `--one-shot` asks for the older single draft (`POST …/discovery/sla`), which covers only about six routes the model picks and doesn't name the rest; avoid it for anything larger.
+2. **Review every clause, and the list of routes not covered, with the user,** and confirm the draft once as a whole. Nothing is sent until it is. Each clause is a promise the bond is docked for, with no appeal.
 3. Register, with a bond: `PROVIDER_PRIVATE_KEY=… node scripts/register-service.mjs <base URL> --bond <USDC>` (the SLA is pinned on IPFS through `POST https://verdikt.bond/discovery/sla/pin`, then one USDC approve on the vault and one `register` of the SLA's hash and CID on the registry; that key owns the service), or the web wizard at <https://verdikt.bond/provider> with the provider's own wallet. The bond is any amount, real USDC: only a bond refunds a FAIL, and each refund is capped at `FIXED_REFUND` (1 USDC). Without one the service is still judged and scored, but refunds nothing.
 4. Share `https://<slug>.verdikt.bond`: calls through it are judged, calls straight to the provider are not.
 

@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 // Put a provider's existing x402 or MPP API behind Verdikt.
 //
-//   node register-service.mjs <base URL> [--bond <USDC>] [--slug <slug>] [--dry-run]
+//   node register-service.mjs <base URL> [--bond <USDC>] [--slug <slug>]
+//     [--exclude "<METHOD> <path>"]... [--dry-run] [--one-shot]
 //
 // Verdikt's discovery drafts an SLA, a free slug and a description from the
-// API's OpenAPI document and live 402s. The draft is printed, and nothing is
+// API's OpenAPI document and live 402s, in parts: it lists every operation the
+// API publishes, drafts each one separately (a few at a time), then assembles
+// them. Every paid route is covered unless left out with --exclude (repeatable,
+// e.g. "POST /search"; for routes that are also served on a network where calls
+// can't be refunded). Routes left out, or that could not be drafted, are printed
+// with the draft. --one-shot asks for the older single draft instead, which
+// covers only a handful of routes. The draft is printed, and nothing is
 // sent until it is confirmed: every clause is a promise the bond is docked
 // for, with no appeal. --bond is the USDC posted to refund FAILs from (any
 // amount, default 0: without a bond, calls are still judged and scored but
@@ -28,7 +35,58 @@ const erc20Abi = parseAbi([
   'function approve(address spender, uint256 amount) returns (bool)'
 ]);
 
-/** Reads discovery's NDJSON stream to its one `draft` (or `error`) line. */
+/** POSTs JSON to a discovery endpoint and answers its JSON body. */
+async function discovery(path, body) {
+  const response = await fetch(`${DEPLOYMENT.discoveryUrl}/discovery/${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const answer = await response.json().catch(() => ({}));
+  if (!response.ok || answer.error) throw new Error(answer.detail ?? answer.error ?? `discovery answered ${response.status}`);
+  return answer;
+}
+
+const DRAFT_CONCURRENCY = 8;
+
+/**
+ * Drafts an SLA in parts: lists the API's operations, drafts each judged one
+ * (minus `excluded`) and assembles them. What was left out, or could not be
+ * drafted, is named in the draft's `leftOut`.
+ */
+async function draftSlaByRoute(url, excluded) {
+  const plan = await discovery('sla/plan', { url });
+  const key = (/** @type {{method: string, path: string}} */ { method, path }) => `${method} ${path}`;
+  const known = new Set(plan.operations.map(key));
+  for (const route of excluded) if (!known.has(route)) throw new Error(`--exclude ${route}: the API publishes no such operation (it publishes ${[...known].join(', ')})`);
+  const leftOut = [
+    ...plan.operations.filter((op) => excluded.has(key(op))).map((op) => ({ route: key(op), reason: 'left out by the provider' })),
+    ...(plan.listedRefused ?? []).map(({ route, reason }) => ({ route, reason: `not drafted: ${reason}` }))
+  ];
+  const chosen = plan.operations.filter((op) => op.judged !== false && !excluded.has(key(op)));
+  console.log(`  ${plan.operations.length} operations published; drafting ${chosen.length}`);
+  const routes = new Array(chosen.length).fill(null);
+  const inferred = [];
+  let next = 0;
+  const worker = async () => {
+    while (next < chosen.length) {
+      const i = next++;
+      try {
+        const { route, inferred: why } = await discovery('sla/route', { url, route: { method: chosen[i].method, path: chosen[i].path } });
+        routes[i] = route;
+        inferred.push(...(why ?? []));
+      } catch (error) {
+        leftOut.push({ route: key(chosen[i]), reason: `could not be drafted: ${error instanceof Error ? error.message : error}` });
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(DRAFT_CONCURRENCY, chosen.length) }, worker));
+  const drafted = routes.filter(Boolean);
+  if (!drafted.length) throw new Error('no route could be drafted');
+  return discovery('sla/assemble', { url, routes: drafted, inferred, leftOut });
+}
+
+/** Reads discovery's NDJSON stream to its one `draft` (or `error`) line: the older one-shot draft. */
 async function draftSla(url) {
   const response = await fetch(`${DEPLOYMENT.discoveryUrl}/discovery/sla`, {
     method: 'POST',
@@ -76,16 +134,21 @@ async function pinSla(sla) {
   return { slaHash: body.slaHash, slaCid: body.slaCid };
 }
 
-const { values, positionals } = parseArgs({ allowPositionals: true, options: { slug: { type: 'string' }, bond: { type: 'string', default: '0' }, 'dry-run': { type: 'boolean', default: false } } });
+const { values, positionals } = parseArgs({ allowPositionals: true, options: { slug: { type: 'string' }, exclude: { type: 'string', multiple: true, default: [] }, 'one-shot': { type: 'boolean', default: false }, bond: { type: 'string', default: '0' }, 'dry-run': { type: 'boolean', default: false } } });
 const [url] = positionals;
-if (!url) throw new Error('usage: node register-service.mjs <base URL> [--bond <USDC>] [--slug <slug>] [--dry-run]');
+if (!url) throw new Error('usage: node register-service.mjs <base URL> [--bond <USDC>] [--slug <slug>] [--exclude "<METHOD> <path>"]... [--dry-run] [--one-shot]');
 const bond = parseUnits(values.bond, 6);
 
 console.log(`drafting an SLA for ${url}`);
-const draft = await draftSla(url);
+if (values['one-shot'] && values.exclude.length) throw new Error('--exclude needs the draft by route; drop --one-shot');
+const draft = values['one-shot'] ? await draftSla(url) : await draftSlaByRoute(url, new Set(values.exclude.map((route) => route.trim().replace(/\s+/g, ' ').replace(/^\S+/, (m) => m.toUpperCase()))));
 const slug = values.slug ?? draft.slug;
 console.log(`\nslug: ${slug}\ndescription: ${draft.description}\n\n${draft.sla}\n`);
 for (const { clause, reason } of draft.inferred ?? []) console.log(`inferred ${clause}: ${reason}`);
+if (draft.leftOut?.length) {
+  console.log(`\nNOT covered by this SLA (${draft.leftOut.length}): calls to these routes are never judged or refunded`);
+  for (const { route, reason } of draft.leftOut) console.log(`  ${route}: ${reason}`);
+}
 if (draft.jevNote) console.log(`\n${draft.jevNote}\n`);
 if (values['dry-run']) process.exit(0);
 
