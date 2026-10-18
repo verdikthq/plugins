@@ -73,7 +73,7 @@ A 4xx is not judged when the SLA cannot be read, and a 402 is never judged: the 
 
 - `conformance`: share of judged calls that met the SLA. `availability`: share that got an answer at all. Both 0–1000 over a trailing window; a service with no judged calls yet reads 1000, so check how many verdicts stand behind it.
 - `bond` (or `deposit`): what is left to refund from, in USDC minor units (6 decimals).
-- `status`: `ACTIVE` routes calls. `SUSPENDED` has a drained bond and routes nothing until topped up.
+- `status`: `ACTIVE` routes calls. `DEREGISTERED` is delisted by its provider and routes nothing. A missing or drained bond does not change the status: the service still routes and is judged, and its FAILs are refunded nothing until the provider tops up.
 
 ### Refund rule
 
