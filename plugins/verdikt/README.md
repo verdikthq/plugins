@@ -35,10 +35,19 @@ and its indexer, never by this repository:
 No secrets or keys belong in this folder, and no account-specific URL other
 than the indexer's.
 
-## Later: an MCP server
+## The MCP server
 
-Not in v1. A remote MCP server would wrap the same HTTP surface as tools:
-`discover` (the catalog and a service's `llms.txt`), `call` (through a payer
-the user configures; Verdikt itself would still hold no wallet), `verdict`,
-`refunds` and `claim`. When it exists, add `"mcpServers": "./mcp.json"` to the
-Cursor and Codex manifests and an `.mcp.json` for Claude Code.
+The remote MCP server at `https://mcp.verdikt.bond/mcp` (Streamable HTTP) wraps
+the same HTTP surface as five tools: `discover`, `call`, `verdict`, `refunds`
+and `claim`. Its implementation is not in this repository. It needs no API key
+for reads and holds no wallet: an unpaid `call` returns the provider's 402
+challenge and the client pays with its own wallet and retries with the signed
+payment header. `claim` returns unsigned calldata only.
+
+| Harness | File | Referenced from |
+|---|---|---|
+| Claude Code | [`.mcp.json`](.mcp.json) | `mcpServers` in `.claude-plugin/plugin.json` |
+| Cursor | [`mcp.json`](mcp.json) | `mcpServers` in `.cursor-plugin/plugin.json` |
+| Codex | [`mcp.json`](mcp.json) | `mcpServers` in `.codex-plugin/plugin.json` |
+
+The official MCP Registry entry is [`/server.json`](../../server.json).
