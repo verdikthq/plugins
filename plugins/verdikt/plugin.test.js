@@ -92,6 +92,7 @@ describe('verdikt plugin', () => {
     expect(claudeMcp.mcpServers.verdikt).toEqual({ type: 'http', url: ENDPOINT });
     expect(sharedMcp.mcpServers.verdikt).toEqual({ url: ENDPOINT });
     expect(registry.remotes).toEqual([{ type: 'streamable-http', url: ENDPOINT }]);
+    expect(registry.description.length).toBeLessThanOrEqual(100); // registry schema limit
     expect(registry.version).toBe(manifests.claude.version);
   });
 
