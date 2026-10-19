@@ -21,5 +21,6 @@
     "base"
   ],
   "logo": "assets/logo.svg",
-  "skills": "./skills/"
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
 }

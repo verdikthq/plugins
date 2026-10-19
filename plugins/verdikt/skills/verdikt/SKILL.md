@@ -193,6 +193,23 @@ A provider with an existing x402 or MPP paid API can put it behind Verdikt:
 
 **Coming soon:** if the API is already listed on Verdikt, its owner will be able to take the listing over by signing a message with the wallet the service's 402 pays (its `payTo`). This is not live yet: don't send a provider to do it, and don't register a second listing for an API that is already listed.
 
-## Not yet
+## MCP tools
 
-There is no Verdikt MCP server yet. A later one would expose `discover`, `call`, `verdict`, `refunds` and `claim` tools over the same HTTP surface; until then everything above is plain HTTP.
+Verdikt also runs a remote MCP server, `https://mcp.verdikt.bond/mcp` (Streamable HTTP, no API key for reads). If its tools are available in your session, prefer them to hand-built HTTP for reads; the flows above stay the reference when they are not.
+
+| Tool | Use it to |
+|---|---|
+| `discover` | list active services with reputation and bond coverage, or fetch one service's hash-checked SLA and `llms.txt` |
+| `call` | call a service through `https://<slug>.verdikt.bond`: returns the 402 challenge, or forwards a payment header you already signed |
+| `verdict` | query asynchronous verdicts by service, payer, payment network and optional route, or read one by request ID |
+| `refunds` | read the payer's current amount owed and credited-refund history |
+| `claim` | prepare unsigned withdrawal calldata and claim authorization data |
+
+Rules that hold for the tools exactly as for plain HTTP:
+
+- **The server holds no wallet and never pays, signs or broadcasts.** An unpaid `call` returns the provider's 402; pay it with your own payer tool (Flow B) and retry through `call` with the signed payment header. Never give the server or anyone a private key or seed phrase.
+- **Verdicts are asynchronous.** The paid response carries none. `call` returns a `verdictQuery` when you supply your payer; poll `verdict` with it afterwards, identifying the payer and the network it paid on.
+- **Check bond coverage before paying.** Use `discover` to see whether the service is bonded and how many refunds the bond covers. A FAIL may be refunded nothing if the bond is absent or exhausted; never promise the user that every failed call is refunded.
+- **Refunds are in USDC on Base,** keyed by the payer and the network it paid on. `claim` does not sign, broadcast or collect: you or the user sign and submit, or arrange a relay, with the user's confirmation.
+
+Use plain HTTP (or the scripts) when the tools are not connected, or for registering a service (Flow D).

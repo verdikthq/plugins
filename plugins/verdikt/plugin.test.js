@@ -18,6 +18,10 @@ const marketplaces = {
   cursor: read(resolve(ROOT, '.cursor-plugin/marketplace.json')),
   claude: read(resolve(ROOT, '.claude-plugin/marketplace.json'))
 };
+const ENDPOINT = 'https://mcp.verdikt.bond/mcp';
+const claudeMcp = read(resolve(PLUGIN, '.mcp.json'));
+const sharedMcp = read(resolve(PLUGIN, 'mcp.json'));
+const registry = read(resolve(ROOT, 'server.json'));
 const skill = readFileSync(resolve(PLUGIN, 'skills/verdikt/SKILL.md'), 'utf8');
 
 describe('verdikt plugin', () => {
@@ -41,6 +45,9 @@ describe('verdikt plugin', () => {
 
   it('names only files that are here', () => {
     const paths = [
+      manifests.claude.mcpServers,
+      manifests.cursor.mcpServers,
+      manifests.codex.mcpServers,
       manifests.cursor.skills,
       manifests.cursor.logo,
       manifests.codex.skills,
@@ -76,5 +83,30 @@ describe('verdikt plugin', () => {
     const named = [...skill.matchAll(/scripts\/([\w-]+\.mjs)/g)].map(([, file]) => file);
     expect(named.length).toBeGreaterThan(0);
     for (const file of new Set(named)) expect(existsSync(resolve(PLUGIN, 'skills/verdikt/scripts', file)), file).toBe(true);
+  });
+
+  it('points every MCP config at the deployed endpoint', () => {
+    expect(manifests.claude.mcpServers).toBe('./.mcp.json');
+    expect(manifests.cursor.mcpServers).toBe('./mcp.json');
+    expect(manifests.codex.mcpServers).toBe('./mcp.json');
+    expect(claudeMcp.mcpServers.verdikt).toEqual({ type: 'http', url: ENDPOINT });
+    expect(sharedMcp.mcpServers.verdikt).toEqual({ url: ENDPOINT });
+    expect(registry.remotes).toEqual([{ type: 'streamable-http', url: ENDPOINT }]);
+    expect(registry.version).toBe(manifests.claude.version);
+  });
+
+  it('keeps secrets and private links out of the MCP files', () => {
+    const text = [claudeMcp, sharedMcp, registry].map((f) => JSON.stringify(f)).join('\n');
+    expect(text).not.toMatch(/key|token|secret|authorization|headers/i);
+    expect(registry.repository.url).toBe('https://github.com/verdikthq/plugins');
+  });
+
+  it('tells the skill about the tools and the payment constraints', () => {
+    for (const tool of ['discover', 'call', 'verdict', 'refunds', 'claim']) expect(skill).toContain(`| \`${tool}\``);
+    expect(skill).toContain(ENDPOINT);
+    expect(skill).toMatch(/never pays, signs or broadcasts/);
+    expect(skill).toMatch(/asynchronous/);
+    expect(skill).toMatch(/bond coverage/);
+    expect(skill).not.toMatch(/no Verdikt MCP server yet/);
   });
 });

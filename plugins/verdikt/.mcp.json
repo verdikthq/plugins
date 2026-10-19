@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "verdikt": {
+      "type": "http",
+      "url": "https://mcp.verdikt.bond/mcp"
+    }
+  }
+}
