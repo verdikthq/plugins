@@ -195,7 +195,7 @@ A provider with an existing x402 or MPP paid API can put it behind Verdikt:
 
 ## MCP tools
 
-Verdikt also runs a remote MCP server, `https://mcp.verdikt.bond/mcp` (Streamable HTTP, no API key for reads). If its tools are available in your session, prefer them to hand-built HTTP for reads; the flows above stay the reference when they are not.
+Verdikt also runs a remote MCP server, `https://mcp.verdikt.bond` (Streamable HTTP, no API key for reads). If its tools are available in your session, prefer them to hand-built HTTP for reads; the flows above stay the reference when they are not.
 
 | Tool | Use it to |
 |---|---|

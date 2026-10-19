@@ -18,7 +18,7 @@ const marketplaces = {
   cursor: read(resolve(ROOT, '.cursor-plugin/marketplace.json')),
   claude: read(resolve(ROOT, '.claude-plugin/marketplace.json'))
 };
-const ENDPOINT = 'https://mcp.verdikt.bond/mcp';
+const ENDPOINT = 'https://mcp.verdikt.bond';
 const claudeMcp = read(resolve(PLUGIN, '.mcp.json'));
 const sharedMcp = read(resolve(PLUGIN, 'mcp.json'));
 const registry = read(resolve(ROOT, 'server.json'));
