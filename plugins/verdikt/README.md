@@ -37,7 +37,7 @@ than the indexer's.
 
 ## The MCP server
 
-The remote MCP server at `https://mcp.verdikt.bond/mcp` (Streamable HTTP) wraps
+The remote MCP server at `https://mcp.verdikt.bond` (Streamable HTTP) wraps
 the same HTTP surface as five tools: `discover`, `call`, `verdict`, `refunds`
 and `claim`. Its implementation is not in this repository. It needs no API key
 for reads and holds no wallet: an unpaid `call` returns the provider's 402

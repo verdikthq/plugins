@@ -15,12 +15,12 @@ call's verdict and refund. It holds no wallet and never pays on its own.
 | Claude Code | `/plugin marketplace add verdikthq/plugins`, then `/plugin install verdikt@verdikt` |
 | Cursor, Grok Bot | From the Cursor Marketplace once listed; until then, this repository's [`.cursor-plugin/marketplace.json`](.cursor-plugin/marketplace.json) |
 | Codex | [`plugins/verdikt/.codex-plugin/plugin.json`](plugins/verdikt/.codex-plugin/plugin.json) |
-| Any MCP client | Add the remote server `https://mcp.verdikt.bond/mcp` (Streamable HTTP, no API key); see [`server.json`](server.json) |
+| Any MCP client | Add the remote server `https://mcp.verdikt.bond` (Streamable HTTP, no API key); see [`server.json`](server.json) |
 | Any other agent | Prompt it with `set up verdikt - https://verdikt.bond/llms.txt` |
 
 ## MCP server
 
-A remote MCP server at `https://mcp.verdikt.bond/mcp` (Streamable HTTP) gives
+A remote MCP server at `https://mcp.verdikt.bond` (Streamable HTTP) gives
 any MCP client five typed tools without a skill: `discover`, `call`,
 `verdict`, `refunds` and `claim`. Read-only tools need no authentication.
 
