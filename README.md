@@ -13,7 +13,7 @@ call's verdict and refund. It holds no wallet and never pays on its own.
 | Agent | How |
 |---|---|
 | Claude Code | `/plugin marketplace add verdikthq/plugins`, then `/plugin install verdikt@verdikt` |
-| Cursor, Grok Bot | From the Cursor Marketplace once listed; until then, this repository's [`.cursor-plugin/marketplace.json`](.cursor-plugin/marketplace.json) |
+| Cursor, Grok Bot | Submitted to the Grok Bot and Cursor marketplaces on 2026-10-19, not yet listed; until then, this repository's [`.cursor-plugin/marketplace.json`](.cursor-plugin/marketplace.json) |
 | Codex | [`plugins/verdikt/.codex-plugin/plugin.json`](plugins/verdikt/.codex-plugin/plugin.json) |
 | Any MCP client | Add the remote server `https://mcp.verdikt.bond` (Streamable HTTP, no API key); see [`server.json`](server.json) |
 | Any other agent | Prompt it with `set up verdikt - https://verdikt.bond/llms.txt` |
