@@ -37,7 +37,7 @@ Calls themselves are paid on whichever network a service's 402 offers: Base, Sol
 ## Guardrails
 
 - **Never pay, move funds or claim a refund without the user's explicit confirmation.** State the URL, the price, the network and the asset first.
-- **Say which network and asset you are paying with before paying.** Verdikt runs on mainnet: every call costs real money (USDC on Base or Solana, USDC.e on Tempo), and a bond posted to register a service is real USDC.
+- **Say which network and asset you are paying with before paying.** Verdikt runs on mainnet: every call costs real money (USDC on Base or Solana, USDC.e on Tempo), and a bond posted to register a service is real USDC. So is the one-time fee a short slug costs to register (Flow D).
 - **Never retry a paid call blindly.** A retry is a new payment. If a call failed, read its verdict (Flow C) instead: a failure that breaks the SLA is refunded on its own.
 - Only paths an SLA route declares are judged. Calling any other path is relayed but never refunded.
 
@@ -190,6 +190,7 @@ A provider with an existing x402 or MPP paid API can put it behind Verdikt:
 2. **Review every clause, and the list of routes not covered, with the user,** and confirm the draft once as a whole. Nothing is sent until it is. Each clause is a promise the bond is docked for, with no appeal.
 3. Register, with a bond: `PROVIDER_PRIVATE_KEY=… node scripts/register-service.mjs <base URL> --bond <USDC>` (the SLA is pinned on IPFS through `POST https://verdikt.bond/discovery/sla/pin`, then one USDC approve on the vault and one `register` of the SLA's hash and CID on the registry; that key owns the service), or the web wizard at <https://verdikt.bond/provider> with the provider's own wallet. The bond is any amount, real USDC: only a bond refunds a FAIL, and each refund is capped at `FIXED_REFUND` (1 USDC). Without one the service is still judged and scored, but refunds nothing.
    A slug is 2 to 63 characters (lowercase letters, digits, hyphens) and some names are reserved for Verdikt's own hostnames (`api`, `www`, `app`, `docs`, `mcp`, `verdikt` and similar); the registry refuses them for everyone.
+   - **The slug's price.** A slug of 6 or more characters registers for gas alone, and discovery proposes one. A shorter slug costs a one-time fee in USDC, sent to Verdikt's treasury: 1000 for 2 characters, 350 for 3, 100 for 4, 10 for 5 (`slugFee(length)` on the registry). It is never refunded, deregistration included, is no part of the bond, and buys no refund coverage and no protection for the name. The script prints it and sends nothing without `--accept-fee`, approving the fee and the bond together; tell the user the price and get their go-ahead before passing it.
 4. Share `https://<slug>.verdikt.bond`: calls through it are judged, calls straight to the provider are not.
 
 **Coming soon:** if the API is already listed on Verdikt, its owner will be able to take the listing over by signing a message with the wallet the service's 402 pays (its `payTo`). This is not live yet: don't send a provider to do it, and don't register a second listing for an API that is already listed.
