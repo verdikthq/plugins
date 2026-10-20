@@ -68,8 +68,8 @@ describe('verdikt plugin', () => {
     for (const path of ['services', 'verdicts', 'refunds', 'status']) {
       expect(skill).toContain(`${indexer}/${path}`);
     }
-    // api.verdikt.bond is Verdikt's paid API and does not serve the index.
-    expect(skill).not.toMatch(/api\.verdikt\.bond/);
+    // api.verdikt.bond serves no index: it is the registrar's free endpoints (quote, check), which sit under /v1/services/.
+    expect(skill).not.toMatch(/api\.verdikt\.bond\/v1\/(?:verdicts|refunds|status|services(?!\/))/);
   });
 
   it('states the same deployment the scripts use', async () => {
