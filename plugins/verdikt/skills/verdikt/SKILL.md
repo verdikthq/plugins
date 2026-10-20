@@ -193,7 +193,7 @@ A provider with an existing x402 or MPP paid API can put it behind Verdikt:
    - **The slug's price.** A slug of 6 or more characters registers for gas alone, and discovery proposes one. A shorter slug costs a one-time fee in USDC, sent to Verdikt's treasury: 1000 for 2 characters, 350 for 3, 100 for 4, 10 for 5 (`slugFee(length)` on the registry). It is never refunded, deregistration included, is no part of the bond, and buys no refund coverage and no protection for the name. The script prints it and sends nothing without `--accept-fee`, approving the fee and the bond together; tell the user the price and get their go-ahead before passing it.
 4. Share `https://<slug>.verdikt.bond`: calls through it are judged, calls straight to the provider are not.
 
-**Coming soon:** if the API is already listed on Verdikt, its owner will be able to take the listing over by signing a message with the wallet the service's 402 pays (its `payTo`). This is not live yet: don't send a provider to do it, and don't register a second listing for an API that is already listed.
+**Already listed by someone else?** Registering a slug does not prove ownership. If the API is already listed, don't register a second listing: its real owner can claim it on the dashboard at `https://verdikt.bond/claim/<slug>` by adding one route to the API at its original URL and verifying it, which costs a 1 USDC claim fee (never refunded). Until then the service page reads "Registered by 0x… (ownership not proven)"; after, "Owner 0x… (proved control of the URL)". Tell the user the fee and get their go-ahead before they claim.
 
 ## MCP tools
 
