@@ -46,8 +46,11 @@ const registryAbi = parseAbi([
 async function slugFee(client, registry, account, slug) {
   try {
     await client.readContract({ address: registry, abi: registryAbi, functionName: 'TREASURY' });
-  } catch {
-    return 0n;
+  } catch (error) {
+    // Only the registry answering "no such function" means it predates the fee;
+    // an RPC or transport failure must abort rather than read as fee-free.
+    if (error?.walk?.((e) => e?.name === 'ContractFunctionRevertedError' || e?.name === 'ContractFunctionZeroDataError')) return 0n;
+    throw error;
   }
   return client.readContract({ address: registry, abi: registryAbi, functionName: 'slugFeeFor', args: [account, BigInt(slug.length)] });
 }
