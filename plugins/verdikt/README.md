@@ -25,8 +25,8 @@ and its indexer, never by this repository:
   authoritative.
 - `https://verdikt-indexer.denis-perov.workers.dev/v1/*`: services, verdicts,
   refunds and index status, served free and read-only by Verdikt's indexer. It
-  is not a Verdikt service: `api.verdikt.bond` is reserved for Verdikt's own
-  paid endpoints and does not serve the index.
+  is not a Verdikt service: `api.verdikt.bond` is Verdikt's own registration
+  service (quote, check and the paid routes) and does not serve the index.
 - The vault and registry on Base mainnet, read and called directly. Their
   addresses are in the skill's Deployment section and in
   `skills/verdikt/scripts/deployment.js`; the test keeps the two equal. Update
