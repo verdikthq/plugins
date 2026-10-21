@@ -68,7 +68,7 @@ describe('verdikt plugin', () => {
     for (const path of ['services', 'verdicts', 'refunds', 'status']) {
       expect(skill).toContain(`${indexer}/${path}`);
     }
-    // api.verdikt.bond serves no index: it is the registration service (quote, check and the paid routes), all under /v1/services/.
+    // api.verdikt.bond serves no index: it is the registration service (quote, check and the paid routes under /register/).
     expect(skill).not.toMatch(/api\.verdikt\.bond\/v1\/(?:verdicts|refunds|status|services(?!\/))/);
   });
 
