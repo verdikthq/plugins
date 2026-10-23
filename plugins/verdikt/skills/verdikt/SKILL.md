@@ -20,8 +20,8 @@ Verdikt runs on **Base mainnet**. Verdicts are written and refunds paid there, i
 | Chain | Base, chain id `8453` (CAIP-2 `eip155:8453`) |
 | Public RPC | `https://mainnet.base.org` |
 | Explorer | `https://basescan.org` |
-| `VerdiktRegistry` (services, SLA hashes and CIDs, verdicts) | `0x165311c64749d5fab9589b8dae11e501eb242c62` |
-| `VerdiktVault` (refunds owed and claimed) | `0xabd7f415357a0e56ac3c811654f1b1c2aa77f436` |
+| `VerdiktRegistry` (services, SLA hashes and CIDs, verdicts) | `0x67ab30123b6b3898d4c57cc8c008097af92f5f28` |
+| `VerdiktVault` (refunds owed and claimed) | `0x3248bfc9888906b0cbeb9a2d8c836eccfc7f1fba` |
 | USDC (bonds and refunds) | `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` |
 | Fixed refund cap per call (`FIXED_REFUND`) | 1 USDC (`1000000`) |
 
@@ -77,7 +77,7 @@ A 4xx is not judged when the SLA cannot be read, and a 402 is never judged: the 
 
 ### Refund rule
 
-A FAIL or DOWN is refunded **only** for calls paid in USDC or USDC.e, in USDC on Base, **to the key that paid**. The refund is the smallest of three amounts: the registry's fixed refund (`FIXED_REFUND`, 1 USDC by default; read it with `cast call 0x165311c64749d5fab9589b8dae11e501eb242c62 "FIXED_REFUND()(uint256)" --rpc-url https://mainnet.base.org`), what you paid, and what is left of the provider's bond. A call that cost more than the fixed refund is only partly refunded. A call paid any other way is still judged and scored, and refunded nothing. The `llms.txt` line `(refundable)` / `(not refundable)` says which payment options qualify.
+A FAIL or DOWN is refunded **only** for calls paid in USDC or USDC.e, in USDC on Base, **to the key that paid**. The refund is the smallest of three amounts: the registry's fixed refund (`FIXED_REFUND`, 1 USDC by default; read it with `cast call 0x67ab30123b6b3898d4c57cc8c008097af92f5f28 "FIXED_REFUND()(uint256)" --rpc-url https://mainnet.base.org`), what you paid, and what is left of the provider's bond. A call that cost more than the fixed refund is only partly refunded. A call paid any other way is still judged and scored, and refunded nothing. The `llms.txt` line `(refundable)` / `(not refundable)` says which payment options qualify.
 
 ## Flow B: call a service
 
@@ -162,7 +162,7 @@ Refunds are booked in the `VerdiktVault` on Base (address in the Deployment sect
 node scripts/claim-refund.mjs --network <CAIP-2 you paid on> --payer <your address or Solana public key>
 ```
 
-Or directly: `cast call 0xabd7f415357a0e56ac3c811654f1b1c2aa77f436 "getOwed(bytes32,bytes32)(uint256)" <payerChain> <payer> --rpc-url https://mainnet.base.org`, in USDC minor units (6 decimals).
+Or directly: `cast call 0x3248bfc9888906b0cbeb9a2d8c836eccfc7f1fba "getOwed(bytes32,bytes32)(uint256)" <payerChain> <payer> --rpc-url https://mainnet.base.org`, in USDC minor units (6 decimals).
 
 ### Claiming (only with the user's confirmation)
 
