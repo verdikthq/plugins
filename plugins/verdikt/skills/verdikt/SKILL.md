@@ -20,8 +20,8 @@ Verdikt runs on **Base mainnet**. Verdicts are written and refunds paid there, i
 | Chain | Base, chain id `8453` (CAIP-2 `eip155:8453`) |
 | Public RPC | `https://mainnet.base.org` |
 | Explorer | `https://basescan.org` |
-| `VerdiktRegistry` (services, SLA hashes and CIDs, verdicts) | `0x67ab30123b6b3898d4c57cc8c008097af92f5f28` |
-| `VerdiktVault` (refunds owed and claimed) | `0x3248bfc9888906b0cbeb9a2d8c836eccfc7f1fba` |
+| `VerdiktRegistry` (services, SLA hashes and CIDs, verdicts) | `0xe182626142e63ef440421cb0c5e4debeef76e4af` |
+| `VerdiktVault` (refunds owed and claimed) | `0x2416d54590d3bf00d9f01c7f2daa4dcc35322866` |
 | USDC (bonds and refunds) | `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` |
 | Fixed refund cap per call (`FIXED_REFUND`) | 1 USDC (`1000000`) |
 
@@ -77,7 +77,7 @@ A 4xx is not judged when the SLA cannot be read, and a 402 is never judged: the 
 
 ### Refund rule
 
-A FAIL or DOWN is refunded **only** for calls paid in USDC or USDC.e, in USDC on Base, **to the key that paid**. The refund is the smallest of three amounts: the registry's fixed refund (`FIXED_REFUND`, 1 USDC by default; read it with `cast call 0x67ab30123b6b3898d4c57cc8c008097af92f5f28 "FIXED_REFUND()(uint256)" --rpc-url https://mainnet.base.org`), what you paid, and what is left of the provider's bond. A call that cost more than the fixed refund is only partly refunded. A call paid any other way is still judged and scored, and refunded nothing. The `llms.txt` line `(refundable)` / `(not refundable)` says which payment options qualify.
+A FAIL or DOWN is refunded **only** for calls paid in USDC or USDC.e, in USDC on Base, **to the key that paid**. The refund is the smallest of three amounts: the registry's fixed refund (`FIXED_REFUND`, 1 USDC by default; read it with `cast call 0xe182626142e63ef440421cb0c5e4debeef76e4af "FIXED_REFUND()(uint256)" --rpc-url https://mainnet.base.org`), what you paid, and what is left of the provider's bond. A call that cost more than the fixed refund is only partly refunded. A call paid any other way is still judged and scored, and refunded nothing. The `llms.txt` line `(refundable)` / `(not refundable)` says which payment options qualify.
 
 ## Flow B: call a service
 
@@ -162,7 +162,7 @@ Refunds are booked in the `VerdiktVault` on Base (address in the Deployment sect
 node scripts/claim-refund.mjs --network <CAIP-2 you paid on> --payer <your address or Solana public key>
 ```
 
-Or directly: `cast call 0x3248bfc9888906b0cbeb9a2d8c836eccfc7f1fba "getOwed(bytes32,bytes32)(uint256)" <payerChain> <payer> --rpc-url https://mainnet.base.org`, in USDC minor units (6 decimals).
+Or directly: `cast call 0x2416d54590d3bf00d9f01c7f2daa4dcc35322866 "getOwed(bytes32,bytes32)(uint256)" <payerChain> <payer> --rpc-url https://mainnet.base.org`, in USDC minor units (6 decimals).
 
 ### Claiming (only with the user's confirmation)
 
@@ -192,6 +192,8 @@ A provider with an existing x402 or MPP paid API can put it behind Verdikt:
    A slug is 2 to 63 characters (lowercase letters, digits, hyphens) and some names are reserved for Verdikt's own hostnames (`api`, `www`, `app`, `docs`, `mcp`, `verdikt` and similar); the registry refuses them for everyone.
    - **The slug's price.** A slug of 6 or more characters registers for gas alone, and discovery proposes one. A shorter slug costs a one-time fee in USDC, sent to Verdikt's treasury: 1000 for 2 characters, 350 for 3, 100 for 4, 10 for 5 (`slugFee(length)` on the registry). It is never refunded, deactivation included, is no part of the bond, and buys no refund coverage and no protection for the name. The script prints it and sends nothing without `--accept-fee`, approving the fee and the bond together; tell the user the price and get their go-ahead before passing it.
 4. Share `https://<slug>.verdikt.bond`: calls through it are judged, calls straight to the provider are not.
+
+   Afterwards the owner can `deactivate` the service (delisted, its slug stays theirs, and the remaining bond comes back at once), `reactivate` it later with a new bond if they like, or `transferService` it to another address. A transfer is free, and the caller's bond is released to them, so the service is unbonded under its new owner until they top up.
 
 **No wallet UI, or an agent doing it?** An agent can register by paying over x402 instead: it names the provider address that will own the listing (not necessarily the paying wallet) and pays 1 USDC plus the slug fee in USDC on Base, and Verdikt sends the transaction (the listing starts unbonded; top a bond up afterwards). Read `https://api.verdikt.bond/llms.txt` for the exact calls: `POST https://api.verdikt.bond/quote` (free) with `provider`, `url` and optionally `slug`, then **always** `POST …/check` (free) before paying, since a failure after payment is not refunded. Pay only the quote's `payUrl`. Most x402 clients refuse to sign for more than 1 USDC by default, so raise the per-payment cap for a short slug's dearer tier. State the price and get the user's go-ahead first, as with any payment.
 
