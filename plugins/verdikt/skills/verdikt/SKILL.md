@@ -210,7 +210,7 @@ Verdikt also runs a remote MCP server, `https://mcp.verdikt.bond` (Streamable HT
 | `verdict` | query asynchronous verdicts by service, payer, payment network and optional route, or read one by request ID |
 | `refunds` | read the payer's current amount owed and credited-refund history |
 | `claim` | prepare unsigned withdrawal calldata and claim authorization data |
-| `feedback` | send the Verdikt team a short ticket (`category`: `bug`, `docs`, `idea` or `service`; `message` up to 1,000 characters; optional `slug`). Only listed when the server has it enabled |
+| `feedback` | send the Verdikt team a short ticket (`category`: `bug`, `docs`, `idea` or `service`; `message` up to 1,000 characters; optional `slug`). |
 
 Rules that hold for the tools exactly as for plain HTTP:
 
