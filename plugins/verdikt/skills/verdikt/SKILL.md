@@ -206,15 +206,18 @@ Verdikt also runs a remote MCP server, `https://mcp.verdikt.bond` (Streamable HT
 | Tool | Use it to |
 |---|---|
 | `discover` | list active services with reputation and bond coverage, or fetch one service's hash-checked SLA and `llms.txt` |
-| `call` | call a service through `https://<slug>.verdikt.bond`: returns the 402 challenge, or forwards a payment header you already signed |
+| `call` | call a service through `https://<slug>.verdikt.bond`: returns the 402 challenge with a `priceCheck` against the route's SLA price, or forwards a payment header you already signed |
 | `verdict` | query asynchronous verdicts by service, payer, payment network and optional route, or read one by request ID |
 | `refunds` | read the payer's current amount owed and credited-refund history |
 | `claim` | prepare unsigned withdrawal calldata and claim authorization data |
+| `feedback` | send the Verdikt team a short ticket (`category`: `bug`, `docs`, `idea` or `service`; `message` up to 1,000 characters; optional `slug`). Only listed when the server has it enabled |
 
 Rules that hold for the tools exactly as for plain HTTP:
 
 - **The server holds no wallet and never pays, signs or broadcasts.** An unpaid `call` returns the provider's 402; pay it with your own payer tool (Flow B) and retry through `call` with the signed payment header. Never give the server or anyone a private key or seed phrase.
 - **Verdicts are asynchronous.** The paid response carries none. `call` returns a `verdictQuery` when you supply your payer; poll `verdict` with it afterwards, identifying the payer and the network it paid on.
+- **Check the price before paying.** An unpaid `call` returns a `priceCheck`: the cheapest amount the 402 asks against the price the route's SLA promises. If its `status` is `above_sla`, stop and get the user's confirmation before paying: a payment above the SLA price fails the SLA's price clause, and a refund then depends on the provider's bond. `unknown` (no price clause, route not covered, SLA unavailable) means nothing was compared; it is not a warning and not a clearance.
+- **Send feedback when something is wrong.** If a 402 is confusing, a response looks wrong but earns no verdict, or a doc is missing, use `feedback` (when listed) with a short description. It is a signal only: it never changes a verdict, score or refund. Never put secrets, private keys, payment headers or response bodies in it.
 - **Check bond coverage before paying.** Use `discover` to see whether the service is bonded and how many refunds the bond covers. A FAIL may be refunded nothing if the bond is absent or exhausted; never promise the user that every failed call is refunded.
 - **Refunds are in USDC on Base,** keyed by the payer and the network it paid on. `claim` does not sign, broadcast or collect: you or the user sign and submit, or arrange a relay, with the user's confirmation.
 
